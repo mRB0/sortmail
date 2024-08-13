@@ -88,7 +88,7 @@ fn load_mappings(config_file: &Path) -> Result<HashMap<String, String>> {
         .flatten()
         .collect();
 
-    return Ok(addresses_to_mailboxes);
+    Ok(addresses_to_mailboxes)
 }
 
 
@@ -98,10 +98,10 @@ fn get_normalized_original_recipient_email_address(args: &Args) -> Result<String
         None => "ORIGINAL_RECIPIENT"
     };
 
-    return Ok(env::var(env_variable)
-              .with_context(|| format!("Missing {} environment variable for recipient email address", env_variable))?
-              .to_lowercase()
-    );
+    Ok(env::var(env_variable)
+       .with_context(|| format!("Missing {} environment variable for recipient email address", env_variable))?
+       .to_lowercase()
+    )
 }
 
 
@@ -158,7 +158,7 @@ fn sort_message_from_stdin(args: &Args) -> Result<()> {
             .context("Error saving message to Maildir")?;
     }
 
-    return Ok(());
+    Ok(())
 }
 
 fn main() {
