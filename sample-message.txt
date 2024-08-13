@@ -1,0 +1,14 @@
+From spammer@example.com  Wed Aug  7 12:12:28 2024
+Return-Path: <spammer@example.com>
+X-Original-To: User@localhost
+Delivered-To: someone@localhost.localdomain
+Received: by mailserver.example.com (Postfix)
+	id 04CB91E002A3; Wed,  7 Aug 2024 12:12:28 -0300 (ADT)
+To: "foo bar" <User@localhost>
+Subject: weird formatting
+User-Agent: mail (GNU Mailutils 3.17)
+Date: Wed,  7 Aug 2024 12:12:28 -0300
+Message-Id: <20240807151228.04CB91E002A3@mailserver.example.com>
+From: Spammer Ordinaire <spammer@example.com>
+
+try it out

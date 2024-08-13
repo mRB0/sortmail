@@ -1,0 +1,10 @@
+[Junk]
+addresses = """\
+foo@bar.com
+baz@spam.com
+"""
+
+[Awesome]
+addresses = """
+nifty@spiffy.com
+"""

@@ -1,0 +1,13 @@
+USER=someone
+HOME=/home/someone
+DOMAIN=localhost.localdomain
+LOGNAME=someone
+ORIGINAL_RECIPIENT=User@localhost
+LOCAL=someone
+PATH=/usr/bin:/bin
+SENDER=spammer@example.com
+LANG=C
+SHELL=/usr/bin/zsh
+MAIL_CONFIG=/etc/postfix
+PWD=/var/spool/postfix
+RECIPIENT=someone@localhost.localdomain
