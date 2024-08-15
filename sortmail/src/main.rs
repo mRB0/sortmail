@@ -6,8 +6,8 @@ use std::rc::Rc;
 
 use maildir::Maildir;
 use anyhow::{Context, Result};
-use clap::{Parser};
-use regex::Regex;
+use clap::Parser;
+use regex::RegexSet;
 use serde::{Deserialize, Deserializer};
 
 //
@@ -71,7 +71,7 @@ fn deserialize_email_addresses_separated_by_newlines<'de, D: Deserializer<'de>>(
 #[derive(Debug)]
 struct AddressMap {
     exact_address_to_mailbox_name: HashMap<String, Rc<String>>,
-    address_regex_to_mailbox_name: Vec<(Regex, Rc<String>)>
+    address_regexset_to_mailbox_name: Vec<(RegexSet, Rc<String>)>
 }
 
 impl AddressMap {
@@ -111,27 +111,25 @@ impl AddressMap {
                     .map(|address| (address, Rc::clone(&mailbox_name)))
                     .collect();
 
-                let address_re_to_mailbox_name_result: Result<Vec<(_, _)>> = mailbox_config
-                    .re_addresses
-                    .into_iter()
-                    .map(|address_re| {
-                        let re_result = Regex::new(&address_re).with_context(|| format!("Error parsing regular expression {address_re}"));
-                        re_result.map(|re| (re, Rc::clone(&mailbox_name)))
-                    })
-                    .collect();
+                let regexset_to_mailbox_name_result = match mailbox_config.re_addresses.is_empty() {
+                    true => Ok(None),
+                    false => RegexSet::new(mailbox_config.re_addresses)
+                        .context("Error parsing regular expressions")
+                        .map(|set| Some((set, Rc::clone(&mailbox_name))))
+                };
 
-                address_re_to_mailbox_name_result.map(|rv| (exact_address_to_mailbox_name, rv))
+                regexset_to_mailbox_name_result.map(|rstmn| (exact_address_to_mailbox_name, rstmn))
 
             }).collect();
 
-        let (exact_address_mailbox_name_lists, address_re_mailbox_name_lists): (Vec<_>, Vec<_>) = zipped_addresses_result?.into_iter().unzip();
+        let (exact_address_mailbox_name_lists, address_regexset_maybe_mailbox_name): (Vec<_>, Vec<Option<(_, _)>>) = zipped_addresses_result?.into_iter().unzip();
 
         let exact_address_to_mailbox_name: HashMap<_, _> = exact_address_mailbox_name_lists.into_iter().flatten().collect();
-        let address_re_to_mailbox_name: Vec<(_, _)> = address_re_mailbox_name_lists.into_iter().flatten().collect();
+        let address_regexset_to_mailbox_name: Vec<(_, _)> = address_regexset_maybe_mailbox_name.into_iter().flatten().collect();
 
         Ok(AddressMap {
             exact_address_to_mailbox_name: exact_address_to_mailbox_name,
-            address_regex_to_mailbox_name: address_re_to_mailbox_name
+            address_regexset_to_mailbox_name: address_regexset_to_mailbox_name
         })
     }
 
@@ -140,7 +138,7 @@ impl AddressMap {
             return Some(mailbox_name);
         }
 
-        let matching_regex = self.address_regex_to_mailbox_name.iter().find(
+        let matching_regex = self.address_regexset_to_mailbox_name.iter().find(
             |(ref re, _)| re.is_match(address)
         );
 
