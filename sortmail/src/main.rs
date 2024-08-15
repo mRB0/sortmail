@@ -2,6 +2,7 @@ use std::env;
 use std::io::{Read, stdin};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 
 use maildir::Maildir;
 use anyhow::{Context, Result};
@@ -69,8 +70,8 @@ fn deserialize_email_addresses_separated_by_newlines<'de, D: Deserializer<'de>>(
 
 #[derive(Debug)]
 struct AddressMap {
-    exact_address_to_mailbox_name: HashMap<String, String>,
-    address_regex_to_mailbox_name: Vec<(Regex, String)>
+    exact_address_to_mailbox_name: HashMap<String, Rc<String>>,
+    address_regex_to_mailbox_name: Vec<(Regex, Rc<String>)>
 }
 
 impl AddressMap {
@@ -99,16 +100,20 @@ impl AddressMap {
         let config: ConfigToml = toml::from_str(&contents)
             .with_context(|| format!("Error parsing config file {}", config_file.display()))?;
 
+        let config_rc: HashMap<Rc<String>, ConfigMailbox> = config
+            .into_iter()
+            .map(|(mbox_name, mbox_config)| (Rc::new(mbox_name), mbox_config))
+            .collect();
 
-        let addresses_to_mailboxes: HashMap<_, _> = config
+        let addresses_to_mailboxes: HashMap<_, _> = config_rc
             .iter()
             .flat_map(
                 |(mailbox_name, config_mailbox)| {
                     let addresses = &config_mailbox.addresses;
 
-                    let address_and_mailbox: Vec<(String, String)> = addresses
+                    let address_and_mailbox: Vec<_> = addresses
                         .iter()
-                        .map(|addr| (String::from(addr), String::from(mailbox_name)))
+                        .map(|addr| (String::from(addr), Rc::clone(mailbox_name)))
                         .collect();
 
                     address_and_mailbox
@@ -116,7 +121,7 @@ impl AddressMap {
             )
             .collect();
 
-        let re_addresses_to_mailboxes: Result<Vec<(_, _)>, _> = config
+        let re_addresses_to_mailboxes: Result<Vec<(_, _)>, _> = config_rc
             .iter()
             .flat_map(
                 |(mailbox_name, config_mailbox)| {
@@ -126,7 +131,7 @@ impl AddressMap {
                         .iter()
                         .map(|addr_re| Regex::new(addr_re).
                              with_context(|| format!("Error parsing regular expression {addr_re}")).
-                             map(|re| (re, String::from(mailbox_name))))
+                             map(|re| (re, Rc::clone(mailbox_name))))
                         .collect();
 
                     address_regexes_and_mailbox
