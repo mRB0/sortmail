@@ -100,48 +100,38 @@ impl AddressMap {
         let config: ConfigToml = toml::from_str(&contents)
             .with_context(|| format!("Error parsing config file {}", config_file.display()))?;
 
-        let config_rc: HashMap<Rc<String>, ConfigMailbox> = config
+        let zipped_addresses_result: Result<Vec<_>> = config
             .into_iter()
-            .map(|(mbox_name, mbox_config)| (Rc::new(mbox_name), mbox_config))
-            .collect();
+            .map(|(mailbox_name_string, mailbox_config)| {
+                let mailbox_name = Rc::new(mailbox_name_string);
 
-        let addresses_to_mailboxes: HashMap<_, _> = config_rc
-            .iter()
-            .flat_map(
-                |(mailbox_name, config_mailbox)| {
-                    let addresses = &config_mailbox.addresses;
+                let exact_address_to_mailbox_name: Vec<(_, _)> = mailbox_config
+                    .addresses
+                    .into_iter()
+                    .map(|address| (address, Rc::clone(&mailbox_name)))
+                    .collect();
 
-                    let address_and_mailbox: Vec<_> = addresses
-                        .iter()
-                        .map(|addr| (String::from(addr), Rc::clone(mailbox_name)))
-                        .collect();
+                let address_re_to_mailbox_name_result: Result<Vec<(_, _)>> = mailbox_config
+                    .re_addresses
+                    .into_iter()
+                    .map(|address_re| {
+                        let re_result = Regex::new(&address_re).with_context(|| format!("Error parsing regular expression {address_re}"));
+                        re_result.map(|re| (re, Rc::clone(&mailbox_name)))
+                    })
+                    .collect();
 
-                    address_and_mailbox
-                }
-            )
-            .collect();
+                address_re_to_mailbox_name_result.map(|rv| (exact_address_to_mailbox_name, rv))
 
-        let re_addresses_to_mailboxes: Result<Vec<(_, _)>, _> = config_rc
-            .iter()
-            .flat_map(
-                |(mailbox_name, config_mailbox)| {
-                    let address_regexes = &config_mailbox.re_addresses;
+            }).collect();
 
-                    let address_regexes_and_mailbox: Vec<_> = address_regexes
-                        .iter()
-                        .map(|addr_re| Regex::new(addr_re).
-                             with_context(|| format!("Error parsing regular expression {addr_re}")).
-                             map(|re| (re, Rc::clone(mailbox_name))))
-                        .collect();
+        let (exact_address_mailbox_name_lists, address_re_mailbox_name_lists): (Vec<_>, Vec<_>) = zipped_addresses_result?.into_iter().unzip();
 
-                    address_regexes_and_mailbox
-                }
-            )
-            .collect();
+        let exact_address_to_mailbox_name: HashMap<_, _> = exact_address_mailbox_name_lists.into_iter().flatten().collect();
+        let address_re_to_mailbox_name: Vec<(_, _)> = address_re_mailbox_name_lists.into_iter().flatten().collect();
 
         Ok(AddressMap {
-            exact_address_to_mailbox_name: addresses_to_mailboxes,
-            address_regex_to_mailbox_name: re_addresses_to_mailboxes?
+            exact_address_to_mailbox_name: exact_address_to_mailbox_name,
+            address_regex_to_mailbox_name: address_re_to_mailbox_name
         })
     }
 
@@ -235,6 +225,7 @@ fn sort_message_from_stdin(args: &Args) -> Result<()> {
 
     Ok(())
 }
+
 
 fn main() -> Result<()> {
     let args = Args::parse();
