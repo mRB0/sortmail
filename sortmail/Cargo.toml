@@ -1,10 +1,12 @@
 [package]
 name = "sortmail"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 
 [dependencies]
 anyhow = "1.0.86"
 clap = { version = "4.5.15", features = ["derive"] }
 maildir = "0.6.4"
+regex = "1.10.6"
+serde = { version = "1.0.207", features = ["derive"] }
 toml = "0.8.19"

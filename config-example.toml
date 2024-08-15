@@ -4,7 +4,18 @@ foo@bar.com
 baz@spam.com
 """
 
+re_addresses = """\
+^spamonly@
+triggerhappy
+"""
+
+
 [Awesome]
 addresses = """
 nifty@spiffy.com
+"""
+
+[RegexOnly]
+re_addresses = """
+@example.com$
 """
